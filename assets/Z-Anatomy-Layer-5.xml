@@ -1,0 +1,16 @@
+<mujoco>
+    <asset>
+        <!-- Define OBJ mesh asset; name is for reference, file is relative/absolute path -->
+        <mesh name="vessel_mesh" file="source/Z-Anatomy-Layer-5.obj" scale="1 1 1"/>
+    </asset>
+    <worldbody>
+        <body name="vessel">
+            <!-- Use geom to reference mesh; type="mesh" specifies mesh geometry -->
+            <geom type="mesh" mesh="vessel_mesh" pos="0 0 0" euler="0 0 0"/>
+        </body>
+        <body name="agent">
+            <joint type="slide" axis="1 0 0"/>
+            <geom type="capsule" size="0.01 0.05" euler="0 0 90"/>
+        </body>
+    </worldbody>
+</mujoco>
