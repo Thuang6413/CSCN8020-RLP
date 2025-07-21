@@ -15,7 +15,7 @@ def record_agent_video(model_path, video_path, max_steps=500):
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, done, truncated, info = env.step(action)
 
-        # 用 env.render() 取得畫面（OpenCV BGR），轉成 RGB
+        # Use env.render() to get the frame (OpenCV BGR), convert to RGB
         env.renderer.update_scene(env.data)
         frame = env.renderer.render()
         frames.append(frame)
@@ -25,9 +25,9 @@ def record_agent_video(model_path, video_path, max_steps=500):
 
     env.close()
 
-    # 存成影片，fps=30
+    # Save as video, fps=30
     imageio.mimsave(video_path, frames, fps=30)
-    print(f"影片已儲存到：{video_path}")
+    print(f"Video saved to: {video_path}")
 
 
 if __name__ == "__main__":
