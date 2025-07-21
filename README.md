@@ -1,2 +1,2 @@
 # CSCN8020-RLP
-Reinforcement Learning Programming
+Reinforcement Learning Programming.
