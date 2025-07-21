@@ -1,0 +1,30 @@
+<mujoco model="blood_vessel">
+    <compiler angle="radian" coordinate="local"/>
+    
+    <option timestep="0.01" gravity="0 0 -9.8"/>
+    
+    <asset>
+        <mesh name="vessel" file="./source/blood_vessel.obj"/>
+    </asset>
+
+    <worldbody>
+        <!-- 你的血管模型，作為環境 -->
+        <body name="blood_vessel" pos="0 0 0">
+            <geom type="mesh" mesh="vessel" rgba="0.9 0.2 0.2 1" contype="1" conaffinity="1" />
+        </body>
+
+        <!-- agent: 一個小球 -->
+        <body name="agent" pos="0 0 0.5">
+            <geom type="sphere" size="0.05" rgba="0.2 0.4 0.8 1" contype="1" conaffinity="1" mass="0.1"/>
+            <joint name="x" type="slide" axis="1 0 0"/>
+            <joint name="y" type="slide" axis="0 1 0"/>
+            <joint name="z" type="slide" axis="0 0 1"/>
+        </body>
+    </worldbody>
+
+    <actuator>
+        <motor joint="x" ctrlrange="-1 1" gear="1"/>
+        <motor joint="y" ctrlrange="-1 1" gear="1"/>
+        <motor joint="z" ctrlrange="-1 1" gear="1"/>
+    </actuator>
+</mujoco>

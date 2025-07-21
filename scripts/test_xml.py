@@ -1,9 +1,9 @@
 import mujoco
-import mujoco.viewer
+from mujoco import viewer
 
-model = mujoco.MjModel.from_xml_path('../assets/Z-Anatomy-Layer-5.xml')
+# 載入模型
+model = mujoco.MjModel.from_xml_path('../assets/blood_vessel_scene.xml')
 data = mujoco.MjData(model)
-print("Model loaded successfully!")
 
-# 啟動視圖器
-mujoco.viewer.launch(model, data)
+# 使用 viewer 查看模型
+viewer.launch(model, data)

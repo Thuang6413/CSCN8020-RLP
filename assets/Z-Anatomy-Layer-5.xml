@@ -1,16 +1,18 @@
 <mujoco>
     <asset>
         <!-- Define OBJ mesh asset; name is for reference, file is relative/absolute path -->
-        <mesh name="vessel_mesh" file="source/Z-Anatomy-Layer-5.obj" scale="1 1 1"/>
+        <mesh name="vessel_mesh" file="source/Z-Anatomy-Layer-5.obj" scale="1 1 1" inertia="shell"/>  <!-- inertia="shell" 留在這裡 -->
     </asset>
     <worldbody>
+        <light pos="0 0 2" dir="0 0 -1" diffuse="1 1 1" specular="0.5 0.5 0.5"/>  <!-- 添加光源照明，避免黑暗 -->
+        <camera name="main" pos="0 0 1" xyaxes="1 0 0 0 1 0"/>  <!-- 預設相機位置，聚焦原點 -->
         <body name="vessel">
             <!-- Use geom to reference mesh; type="mesh" specifies mesh geometry -->
-            <geom type="mesh" mesh="vessel_mesh" pos="0 0 0" euler="0 0 0"/>
+            <geom type="mesh" mesh="vessel_mesh" pos="0 0 0" euler="0 0 0" rgba="1 0 0 1"/>  <!-- 移除 shellinertia="true" -->
         </body>
         <body name="agent">
             <joint type="slide" axis="1 0 0"/>
-            <geom type="capsule" size="0.01 0.05" euler="0 0 90"/>
+            <geom type="capsule" size="0.01 0.05" euler="0 0 90" rgba="0 0 1 1"/>  <!-- 添加顏色給代理 (藍色) -->
         </body>
     </worldbody>
 </mujoco>
