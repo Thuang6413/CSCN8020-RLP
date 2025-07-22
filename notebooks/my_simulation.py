@@ -68,22 +68,7 @@ def main():
         elif hasattr(umr, param):
             setattr(umr, param, value)
         else:
-            print(f"⚠️ Unmatched parameter: {param}")
-
-    print("\n=== Vessel Environment Parameters ===")
-    for key, value in vars(vessel).items():
-        print(f"{key}: {value}")
-
-    print("\n=== UMR Properties ===")
-    for key, value in vars(umr).items():
-        print(f"{key}: {value}")
-
-    print("\nFormatted parameter names from CSV:")
-    for _, row in df.iterrows():
-        param = format_field(row["Parameter"])
-        print(param)
-
-    print(vars(vessel).keys())
+            print(f"Unmatched parameter: {param}")
 
 
 if __name__ == "__main__":
