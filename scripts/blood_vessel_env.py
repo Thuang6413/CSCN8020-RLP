@@ -13,6 +13,9 @@ class BloodVesselEnv(gym.Env):
             "../assets/blood_vessel_scene.xml")
         self.data = mujoco.MjData(self.model)
 
+        self.entrance_pos = self.model.body_pos[self.model.body_name2id("vessel_entrance")]
+        self.exit_pos = self.model.body_pos[self.model.body_name2id("vessel_exit")]
+
         # Initialize Renderer (for rendering with OpenCV)
         self.renderer = Renderer(self.model, width=640, height=480)
 
@@ -20,6 +23,32 @@ class BloodVesselEnv(gym.Env):
             low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
+        
+    def get_geom_bounding_box(self, geom_name):
+        """
+        根據 geom 名稱推斷其在 x, y, z 三軸上的 bounding box 範圍。
+        回傳格式：{"x": (min_x, max_x), "y": (...), "z": (...)}
+        """
+
+        # 取得該 geom 的 ID
+        geom_id = self.model.geom_name2id(geom_name)
+
+        # 取得世界座標中的幾何體中心位置
+        geom_center = self.model.geom_xpos[geom_id]  # shape (3,)
+        
+        # 取得 geom 尺寸（通常是半徑/半長度）
+        geom_size = self.model.geom_size[geom_id]  # shape (3,) 對應 x, y, z
+
+        # 推算 bounding box（中心 ± 尺寸）
+        min_bounds = geom_center - geom_size
+        max_bounds = geom_center + geom_size
+
+        return {
+            "x": (min_bounds[0], max_bounds[0]),
+            "y": (min_bounds[1], max_bounds[1]),
+            "z": (min_bounds[2], max_bounds[2]),
+        }
+
 
     def reset(self, seed=None, options=None):
         mujoco.mj_resetData(self.model, self.data)
