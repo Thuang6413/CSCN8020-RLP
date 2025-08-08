@@ -2,13 +2,13 @@
     <compiler angle="radian" coordinate="local"/>
     <option timestep="0.01" gravity="0 0 -9.8"/>
 
-    <!-- 調整背景顏色為淺灰色 -->
+    <!-- Set up background -->
     <visual>
         <global offheight="480" offwidth="640" />
         <map znear="0.01" zfar="50" />
         <quality shadowsize="2048"/>
         <headlight ambient="0.6 0.6 0.6" diffuse="0.6 0.6 0.6" specular="0.3 0.3 0.3"/>
-        <rgba fog="0.9 0.9 0.9 1"/> <!-- 這一行是背景色 -->
+        <rgba fog="0.9 0.9 0.9 1"/> <!-- background color -->
     </visual>
 
     <asset>
@@ -18,26 +18,26 @@
     </asset>
 
     <worldbody>
-        <!-- 血管主體 -->
+        <!-- Vessel body -->
         <body name="blood_vessel_body" pos="0 0 0">
-            <!-- 視覺呈現（不參與碰撞） -->
+            <!-- Visual only (not for collision) -->
             <geom type="mesh" mesh="vessel_body" rgba="1 0.4 0.4 0.4" contype="1" conaffinity="0"/>
 
-            <!-- 碰撞殼體（實際作用的物理體）
+            <!-- Collision shell (actual physical body)
             <geom type="cylinder" size="0.095 0.9" rgba="0 0 0 0.1" contype="1" conaffinity="1"/> -->
         </body>
 
-        <!-- 入口 Green -->
+        <!-- Entrance (Green) -->
         <body name="vessel_entrance" pos="0 0 -0.6025"> <!-- -body_height/2 - disc/2 -->
             <geom type="mesh" mesh="vessel_entrance" rgba="	0.4 1.0 0.4 0.4" contype="3" conaffinity="3"/>
         </body>
 
-        <!-- 出口 Blue -->
+        <!-- Exit (Blue) -->
         <body name="vessel_exit" pos="0 0 0.6025"> <!-- +body_height/2 + disc/2 -->
             <geom type="mesh" mesh="vessel_exit" rgba="0.4 0.4 1.0 0.4" contype="0" conaffinity="0"/>
         </body>
 
-        <!-- agent: 控制小球 -->
+        <!-- agent: controllable ball -->
         <body name="agent" pos="0 0 -0.55">
             <geom type="sphere" size="0.05" rgba="1 1 0.6 1" contype="4" conaffinity="1" mass="0.1"/>
             <joint name="x" type="slide" axis="1 0 0"/>

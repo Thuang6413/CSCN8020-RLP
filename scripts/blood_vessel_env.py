@@ -26,20 +26,20 @@ class BloodVesselEnv(gym.Env):
         
     def get_geom_bounding_box(self, geom_name):
         """
-        根據 geom 名稱推斷其在 x, y, z 三軸上的 bounding box 範圍。
-        回傳格式：{"x": (min_x, max_x), "y": (...), "z": (...)}
+        Estimate the bounding box range of a geom along x, y, z axes by its name.
+        Return format: {"x": (min_x, max_x), "y": (...), "z": (...)}
         """
 
-        # 取得該 geom 的 ID
+        # Get the geom ID
         geom_id = self.model.geom_name2id(geom_name)
 
-        # 取得世界座標中的幾何體中心位置
+        # Get the center position of the geom in world coordinates
         geom_center = self.model.geom_xpos[geom_id]  # shape (3,)
-        
-        # 取得 geom 尺寸（通常是半徑/半長度）
-        geom_size = self.model.geom_size[geom_id]  # shape (3,) 對應 x, y, z
 
-        # 推算 bounding box（中心 ± 尺寸）
+        # Get the size of the geom (usually radius/half-length)
+        geom_size = self.model.geom_size[geom_id]  # shape (3,) corresponding to x, y, z
+
+        # Estimate bounding box (center ± size)
         min_bounds = geom_center - geom_size
         max_bounds = geom_center + geom_size
 

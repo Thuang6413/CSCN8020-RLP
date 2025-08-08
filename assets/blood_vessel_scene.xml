@@ -8,12 +8,12 @@
     </asset>
 
     <worldbody>
-        <!-- 你的血管模型，作為環境 -->
+        <!-- Your blood vessel model as the environment -->
         <body name="blood_vessel" pos="0 0 0">
             <geom type="mesh" mesh="vessel" rgba="0.9 0.2 0.2 1" contype="1" conaffinity="1" />
         </body>
 
-        <!-- agent: 一個小球 -->
+        <!-- agent: a small ball -->
         <body name="agent" pos="0 0 0.5">
             <geom type="sphere" size="0.05" rgba="0.2 0.4 0.8 1" contype="1" conaffinity="1" mass="0.1"/>
             <joint name="x" type="slide" axis="1 0 0"/>
