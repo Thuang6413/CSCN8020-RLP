@@ -208,3 +208,4 @@ __marimo__/
 
 # MuJoCo logs or caches
 mujoco_log.txt
+*.zip
