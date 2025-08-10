@@ -1,0 +1,65 @@
+<mujoco model="blood_vessel_navigation">
+    <!-- 基本設定 -->
+    <compiler angle="radian" coordinate="local"/>
+    <option timestep="0.01" gravity="0 0 0"/> <!-- 無重力 -->
+
+    <!-- 視覺化 -->
+    <visual>
+        <global offheight="480" offwidth="640"/>
+        <map znear="0.01" zfar="50"/>
+        <quality shadowsize="2048"/>
+        <headlight ambient="0.6 0.6 0.6" diffuse="0.6 0.6 0.6" specular="0.3 0.3 0.3"/>
+        <rgba fog="0.9 0.9 0.9 1"/> <!-- 背景顏色 -->
+    </visual>
+
+    <!-- 外部3D資產 -->
+    <asset>
+        <mesh name="vessel_body"     file="./source/vessel_tube.obj"/>
+        <mesh name="vessel_entrance" file="./source/vessel_entrance.obj"/>
+        <mesh name="vessel_exit"     file="./source/vessel_exit.obj"/>
+    </asset>
+
+    <worldbody>
+        <camera name="top_view" pos="-0.365 0.282 1.170" xyaxes="-0.611 -0.791 0.000 0.736 -0.569 0.367"/>
+        <camera name="side_view"  pos="-0.016 0.011 -1.124" xyaxes="-0.558 -0.830 0.000 -0.830 0.558 0.017"/>
+        <camera name="front_view" pos="-0.951 0.587 0.115" xyaxes="-0.525 -0.851 -0.000 0.087 -0.054 0.995"/>
+
+
+
+        <!-- 血管本體 -->
+        <body name="blood_vessel_body" pos="0 0 0">
+            <geom type="mesh" mesh="vessel_body" rgba="1 0.4 0.4 0.4" contype="0" conaffinity="0"/>
+        </body>
+
+        <!-- 入口（綠色） -->
+        <body name="vessel_entrance" pos="0 0 -0.6">
+            <geom type="mesh" mesh="vessel_entrance" rgba="0.4 1.0 0.4 0.4" contype="0" conaffinity="0"/>
+        </body>
+
+        <!-- 出口（藍色） -->
+        <body name="vessel_exit" pos="0 0 0.6">
+            <geom type="mesh" mesh="vessel_exit" rgba="0.4 0.4 1.0 0.4" contype="0" conaffinity="0"/>
+        </body>
+
+        <!-- Agent: 球體 直徑9mm -->
+        <body name="agent">
+            <geom type="sphere" size="0.009" rgba="1 1 0.6 1" density="1000" contype="0" conaffinity="0"/>
+            <freejoint name="agent_free"/>
+        </body>
+
+        <!-- Target: mocap 可移動 -->
+        <body name="target" mocap="true">
+            <geom type="sphere" size="0.005" rgba="1 0 0 1" contype="0" conaffinity="0"/>
+        </body>
+
+        <!-- 軌跡根節點（可用於畫路徑） -->
+        <body name="trajectory_root"/>
+    </worldbody>
+
+    <!-- 控制器（模擬磁力推動XYZ） -->
+    <actuator>
+        <motor name="mag_x" joint="agent_free" gear="1 0 0 0 0 0"/>
+        <motor name="mag_y" joint="agent_free" gear="0 1 0 0 0 0"/>
+        <motor name="mag_z" joint="agent_free" gear="0 0 1 0 0 0"/>
+    </actuator>
+</mujoco>

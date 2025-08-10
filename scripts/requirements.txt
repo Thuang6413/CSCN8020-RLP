@@ -1,0 +1,11 @@
+gymnasium==1.2.0
+imageio==2.37.0
+matplotlib==3.10.5
+mujoco==3.3.4
+numpy==2.3.2
+opencv_contrib_python==4.11.0.86
+opencv_python==4.11.0.86
+opencv_python_headless==4.11.0.86
+stable_baselines3==2.7.0
+trimesh==4.7.1
+websocket_client==1.8.0
