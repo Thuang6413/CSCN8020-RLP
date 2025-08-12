@@ -33,12 +33,12 @@ class BloodVesselEnv(gym.Env):
         # --- Environment parameters ---
         self.space_size = space_size
         self.vessel_radius = vessel_radius
+        self.viscosity = viscosity
         self.friction_coeff = friction_coeff
+        self.flow_rate = 2.29e-6
+        self.flow_vel = self.flow_rate / (self.vessel_radius ** 2)
         self.max_magnetic_field = 10.0
         self.max_steps = 1000
-
-        self.viscosity = viscosity
-        self.flow_vel = 0
 
         if self.render_mode == "human" or self.render_mode == "rgb_array":
             self.camera_names = ["top_view", "side_view", "front_view"]
@@ -47,8 +47,13 @@ class BloodVesselEnv(gym.Env):
         else:
             self.renderers = None
 
+        # --- Action space (unchanged) ---
         self.action_space = spaces.Box(
             low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
+
+        # --- Observation space (major update) ---
+        # New observation space:
+        # 3 (vector to target) + 3 (self velocity) + 1 (flow velocity) + 1 (viscosity) = 8
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(8,), dtype=np.float32)
 
@@ -59,14 +64,11 @@ class BloodVesselEnv(gym.Env):
         if seed is not None:
             np.random.seed(seed)
 
-        flow_rate = np.random.uniform(low=1.5e-6, high=3.5e-6)
-        self.viscosity = np.random.uniform(low=0.010, high=0.025)
-        self.flow_vel = flow_rate / (self.vessel_radius ** 2)
-
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos[:3] = self.entrance_pos.copy()
         self.data.qvel[:] = 0.0
 
+        # Randomize target position (unchanged)
         self.target_pos = np.random.uniform(
             low=-self.vessel_radius, high=self.vessel_radius, size=3)
         self.target_pos[2] = np.random.uniform(
@@ -81,15 +83,21 @@ class BloodVesselEnv(gym.Env):
         return self._get_obs(), {}
 
     def _get_obs(self):
+        # --- Observation logic (major update) ---
+        # Calculate vector from agent to target
         vector_to_target = self.target_pos - self.data.qpos[:3]
+
+        # Combine new observation vector
         return np.concatenate([
-            vector_to_target,
-            self.data.qvel[:3],
+            vector_to_target,          # 3D: direction and distance to target
+            self.data.qvel[:3],        # 3D: self velocity
+            # 2D: environment parameters
             np.array([self.flow_vel, self.viscosity])
         ]).astype(np.float32)
 
     def step(self, action):
         self.step_count += 1
+        # ... (Action mapping and physics simulation unchanged) ...
         B_magnitude = (action[0] + 1) * self.max_magnetic_field / 2
         B_dir = action[1:4] / np.linalg.norm(
             action[1:4]) if np.linalg.norm(action[1:4]) > 0 else np.zeros(3)
@@ -98,65 +106,53 @@ class BloodVesselEnv(gym.Env):
         flow_force = -self.flow_vel * self.viscosity * self.friction_coeff
         self.data.qfrc_applied[:3] = [flow_force, 0, 0]
 
-        radial_distance = np.sqrt(self.data.qpos[0]**2 + self.data.qpos[1]**2)
-        distance_outside_radial = max(0, radial_distance - self.vessel_radius)
-        z_min, z_max = self.entrance_pos[2], self.exit_pos[2]
-        distance_outside_z = 0
-        if self.data.qpos[2] < z_min:
-            distance_outside_z = z_min - self.data.qpos[2]
-        elif self.data.qpos[2] > z_max:
-            distance_outside_z = self.data.qpos[2] - z_max
-
+        prev_dist = np.linalg.norm(self.target_pos - self.data.qpos[:3])
         mj_step(self.model, self.data)
         obs = self._get_obs()
         current_dist = np.linalg.norm(self.target_pos - self.data.qpos[:3])
 
-        # --- Final smooth reward logic ---
-        # 1. Reduce the scale of rewards and penalties to make them smoother
+        # --- Use the previously validated "aggressive reward" logic ---
         goal_reward = 0
-        # Use a reasonable and achievable target radius
-        terminated = bool(current_dist < 0.02)
+        terminated = bool(current_dist < 0.05)
         if terminated:
-            goal_reward = 10.0  # Mild but clear success reward
+            goal_reward = 1000
 
-        # Mild distance reward
-        distance_reward = 1.0 * (1 - np.tanh(10 * current_dist))
+        progress = prev_dist - current_dist
+        if progress > 0:
+            distance_reward = progress * 200
+        else:
+            distance_reward = -2.0
 
-        # Mild time penalty
-        time_penalty = -0.01
-
-        # Mild out-of-bounds penalty
-        outside_penalty = 0
-        if distance_outside_radial > 0 or distance_outside_z > 0:
-            outside_penalty = -5.0  # Clear but not extreme penalty
-            terminated = True
-        # --- End of modification ---
-
-        reward = goal_reward + distance_reward + time_penalty + outside_penalty
+        time_penalty = -1.0
+        reward = goal_reward + distance_reward + time_penalty
 
         if self.step_count >= self.max_steps:
             terminated = True
 
         truncated = False
-        info = {"clot_dist": current_dist, "flow_vel": self.flow_vel,
-                "outside_penalty": outside_penalty}
+        info = {"clot_dist": current_dist,
+                "flow_vel": self.flow_vel, "outside_penalty": 0}
         return obs, reward, terminated, truncated, info
 
     def render(self):
-        # ... Render function unchanged ...
+        # ... (Render function unchanged, but we can update displayed text) ...
         if self.render_mode not in ["human", "rgb_array"] or self.renderers is None:
             return None
+
         images = []
         for cam in self.camera_names:
             self.renderers[cam].update_scene(self.data, camera=cam)
             img = self.renderers[cam].render()
             img_bgr = np.ascontiguousarray(img[..., ::-1])
+
+            # Update displayed text
             clot_dist = np.linalg.norm(self.data.qpos[:3] - self.target_pos)
             cv2.putText(img_bgr, f"Dist: {clot_dist:.4f} m ({cam})", (
                 10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(img_bgr, f"Flow: {self.flow_vel*1000:.2f} mm/s",
                         (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             images.append(img_bgr)
+
         combined_img = np.hstack(images)
         if self.render_mode == "human":
             cv2.imshow("Blood Vessel Navigation", combined_img)

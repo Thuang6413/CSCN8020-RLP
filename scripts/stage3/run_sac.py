@@ -25,7 +25,7 @@ env = DummyVecEnv([make_env()])
 # --- Key! Load your final trained model ---
 # Please replace this path with the actual path to best_model.zip generated after stage 3 training
 # For example: "./best_model/SAC_xxxxxxxxxx_stage3_robust/best_model.zip"
-model_path = "./best_model/SAC_1754951774_final_stable_polish/best_model.zip"
+model_path = "./best_model/SAC_1754890706_stage3_robust/best_model.zip"
 model = SAC.load(model_path, env=env)
 
 # --- Main loop, will keep running until manually closed ---
@@ -84,3 +84,4 @@ finally:
     # In any case, gracefully close the environment and all OpenCV windows
     env.close()
     cv2.destroyAllWindows()
+    print("Program closed.")

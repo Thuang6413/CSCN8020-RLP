@@ -33,12 +33,12 @@ class BloodVesselEnv(gym.Env):
         # --- Environment parameters ---
         self.space_size = space_size
         self.vessel_radius = vessel_radius
+        self.viscosity = viscosity
         self.friction_coeff = friction_coeff
+        self.flow_rate = 2.29e-6
+        self.flow_vel = self.flow_rate / (self.vessel_radius ** 2)
         self.max_magnetic_field = 10.0
         self.max_steps = 1000
-
-        self.viscosity = viscosity
-        self.flow_vel = 0
 
         if self.render_mode == "human" or self.render_mode == "rgb_array":
             self.camera_names = ["top_view", "side_view", "front_view"]
@@ -47,8 +47,11 @@ class BloodVesselEnv(gym.Env):
         else:
             self.renderers = None
 
+        # --- Action space (unchanged) ---
         self.action_space = spaces.Box(
             low=-1.0, high=1.0, shape=(4,), dtype=np.float32)
+
+        # --- Observation space (unchanged) ---
         self.observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(8,), dtype=np.float32)
 
@@ -59,14 +62,11 @@ class BloodVesselEnv(gym.Env):
         if seed is not None:
             np.random.seed(seed)
 
-        flow_rate = np.random.uniform(low=1.5e-6, high=3.5e-6)
-        self.viscosity = np.random.uniform(low=0.010, high=0.025)
-        self.flow_vel = flow_rate / (self.vessel_radius ** 2)
-
         mujoco.mj_resetData(self.model, self.data)
         self.data.qpos[:3] = self.entrance_pos.copy()
         self.data.qvel[:] = 0.0
 
+        # Randomize target position (unchanged)
         self.target_pos = np.random.uniform(
             low=-self.vessel_radius, high=self.vessel_radius, size=3)
         self.target_pos[2] = np.random.uniform(
@@ -90,6 +90,7 @@ class BloodVesselEnv(gym.Env):
 
     def step(self, action):
         self.step_count += 1
+        # ... (Action mapping and physics simulation unchanged) ...
         B_magnitude = (action[0] + 1) * self.max_magnetic_field / 2
         B_dir = action[1:4] / np.linalg.norm(
             action[1:4]) if np.linalg.norm(action[1:4]) > 0 else np.zeros(3)
@@ -98,41 +99,49 @@ class BloodVesselEnv(gym.Env):
         flow_force = -self.flow_vel * self.viscosity * self.friction_coeff
         self.data.qfrc_applied[:3] = [flow_force, 0, 0]
 
+        # --- Added: Calculate out-of-bounds distance ---
+        # Calculate radial (XY plane) out-of-bounds distance
         radial_distance = np.sqrt(self.data.qpos[0]**2 + self.data.qpos[1]**2)
         distance_outside_radial = max(0, radial_distance - self.vessel_radius)
+
+        # Calculate axial (Z axis) out-of-bounds distance
         z_min, z_max = self.entrance_pos[2], self.exit_pos[2]
         distance_outside_z = 0
         if self.data.qpos[2] < z_min:
             distance_outside_z = z_min - self.data.qpos[2]
         elif self.data.qpos[2] > z_max:
             distance_outside_z = self.data.qpos[2] - z_max
+        # --- End added ---
 
         mj_step(self.model, self.data)
+
         obs = self._get_obs()
         current_dist = np.linalg.norm(self.target_pos - self.data.qpos[:3])
 
-        # --- Final smooth reward logic ---
-        # 1. Reduce the scale of rewards and penalties to make them smoother
+        # --- Stage 2 reward logic ---
+
+        # 1. Goal achievement reward (unchanged)
         goal_reward = 0
-        # Use a reasonable and achievable target radius
-        terminated = bool(current_dist < 0.02)
+        terminated = bool(current_dist < 0.05)
         if terminated:
-            goal_reward = 10.0  # Mild but clear success reward
+            goal_reward = 1000
 
-        # Mild distance reward
-        distance_reward = 1.0 * (1 - np.tanh(10 * current_dist))
+        # 2. Nonlinear distance reward (unchanged)
+        distance_reward = 10 * (1 - np.tanh(10 * current_dist))
 
-        # Mild time penalty
-        time_penalty = -0.01
+        # 3. Time penalty (unchanged)
+        time_penalty = -0.05
 
-        # Mild out-of-bounds penalty
+        # 4. Added! Out-of-bounds penalty
+        # As long as there is any out-of-bounds, give a fixed, large penalty
         outside_penalty = 0
         if distance_outside_radial > 0 or distance_outside_z > 0:
-            outside_penalty = -5.0  # Clear but not extreme penalty
-            terminated = True
-        # --- End of modification ---
+            outside_penalty = -500  # Severe penalty
+            terminated = True  # Out of bounds, episode ends immediately
 
+        # Total reward
         reward = goal_reward + distance_reward + time_penalty + outside_penalty
+        # --- End modification ---
 
         if self.step_count >= self.max_steps:
             terminated = True
@@ -140,23 +149,27 @@ class BloodVesselEnv(gym.Env):
         truncated = False
         info = {"clot_dist": current_dist, "flow_vel": self.flow_vel,
                 "outside_penalty": outside_penalty}
-        return obs, reward, terminated, truncated, info
+
+        result = (obs, reward, terminated, truncated, info)
+        return result
 
     def render(self):
-        # ... Render function unchanged ...
         if self.render_mode not in ["human", "rgb_array"] or self.renderers is None:
             return None
+
         images = []
         for cam in self.camera_names:
             self.renderers[cam].update_scene(self.data, camera=cam)
             img = self.renderers[cam].render()
             img_bgr = np.ascontiguousarray(img[..., ::-1])
+
             clot_dist = np.linalg.norm(self.data.qpos[:3] - self.target_pos)
             cv2.putText(img_bgr, f"Dist: {clot_dist:.4f} m ({cam})", (
                 10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.putText(img_bgr, f"Flow: {self.flow_vel*1000:.2f} mm/s",
                         (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             images.append(img_bgr)
+
         combined_img = np.hstack(images)
         if self.render_mode == "human":
             cv2.imshow("Blood Vessel Navigation", combined_img)
